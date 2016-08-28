@@ -6,9 +6,20 @@
   :dependencies [[aero "1.0.0-beta2"]
                  [org.clojure/clojure "1.8.0"]
                  [org.clojure/tools.cli "0.3.5"]
-                 [org.onyxplatform/onyx "0.9.9"]
-                 [org.onyxplatform/lib-onyx "0.9.0.1"]]
+                 [org.onyxplatform/onyx "0.9.10-beta1" :exclusions [prismatic/schema commons-codec commons-logging
+                                                                    org.clojure/tools.reader]]
+                 [org.onyxplatform/lib-onyx "0.9.7.1" :exclusions [commons-codec]]
+                 [com.datomic/datomic-pro "0.9.5201" :exclusions [joda-time commons-codec
+                                                                  org.apache.httpcomponents/httpcore
+                                                                  org.apache.httpcomponents/httpclient]]
+                 [org.onyxplatform/onyx-datomic "0.9.10.0-beta1" :exclusions [org.slf4j/slf4j-api commons-codec]]
+                 [org.onyxplatform/onyx-elasticsearch "0.9.10.0-beta1" :exclusions [org.slf4j/slf4j-api]]]
   :source-paths ["src"]
+
+  :main braid-onyx.core
+
+  :repositories {"my.datomic.com" {:url "https://my.datomic.com/repo"
+                                   :creds :gpg}}
 
   :profiles {:dev {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
                    :global-vars {*assert* true}}
