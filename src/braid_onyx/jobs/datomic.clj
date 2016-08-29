@@ -2,7 +2,6 @@
   (:require [onyx.job :refer [add-task register-job]]
             [onyx.tasks.datomic :as datomic-task]
             [onyx.plugin.datomic]
-            [onyx.plugin.http-output]
             [onyx.plugin.elasticsearch]
             [datomic.api :as d]))
 
@@ -11,10 +10,9 @@
   "datomic:dev://localhost:4334/chat-dev")
 
 (def workflow
-  [;[:read-log :write-messages]
-   [:read-log :split-txns]
-   [:split-txns :process-for-req]
-   [:process-for-req :http-output]
+  [[:read-log :split-txns]
+   [:split-txns :process-for-es]
+   [:process-for-es :write-messages]
    ])
 
 (defn build-catalog
@@ -26,23 +24,15 @@
      :onyx/medium :elasticsearch
      :elasticsearch/host "127.0.0.1"
      :elasticsearch/port 9200
-     :elasticsearch/cluster-name "my-cluster-name"
+     ;:elasticsearch/cluster-name "my-cluster-name"
      :elasticsearch/client-type :http
-     :elasticsearch/http-ops {:basic-auth ["user" "pass"]}
-     :elasticsearch/index "my-index-name"
-     :elasticsearch/mapping "my-mapping-name"
-     :elasticsearch/doc-id "my-id"
+     ;:elasticsearch/http-ops {:basic-auth ["user" "pass"]}
+     :elasticsearch/index "braid-messages"
+     :elasticsearch/mapping "messages-mapping"
+     ;:elasticsearch/doc-id "my-id"
      :elasticsearch/write-type :insert
      :onyx/batch-size batch-size
      :onyx/doc "Writes documents to elasticsearch"}
-
-    {:onyx/name :http-output
-     :onyx/plugin :onyx.plugin.http-output/output
-     :onyx/type :output
-     :onyx/medium :http
-     :http-output/success-fn ::success?
-     :onyx/batch-size batch-size
-     :onyx/doc "POST segments to http endpoint"}
 
     {:onyx/name :split-txns
      :onyx/fn ::split-txns
@@ -50,8 +40,8 @@
      :onyx/batch-size batch-size
      :onyx/batch-timeout batch-timeout}
 
-    {:onyx/name :process-for-req
-     :onyx/fn ::process-for-req
+    {:onyx/name :process-for-es
+     :onyx/fn ::process-for-es
      :onyx/type :function
      :onyx/batch-size batch-size
      :onyx/batch-timeout batch-timeout}
@@ -60,9 +50,10 @@
 
 (def success? (constantly true))
 
-(defn process-for-req
-  [segment]
-  {:url "http://localhost:9999/" :args {:body (pr-str segment)}})
+(defn process-for-es
+  [{[eid attr v t insert?] :txn :as segment}]
+  {:elasticsearch/message {:content v}
+   :elasticsearch/doc-id (str eid)})
 
 (defn split-txns
   [{:keys [id data t] :as segment}]
@@ -85,9 +76,10 @@
   (and insert? (= message-content-id attr)))
 
 (def flow-conditions
-  [{:flow/from :process-for-req
-    :flow/to [:http-output]
-    :flow/predicate ::message?}])
+  [{:flow/from :process-for-es
+    :flow/to [:write-messages]
+    :flow/predicate ::message?}
+   ])
 
 (defn datomic-job
   [{:keys [onyx/batch-size onyx/batch-timeout] :as batch-settings}]
