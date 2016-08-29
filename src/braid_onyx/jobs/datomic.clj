@@ -9,11 +9,14 @@
   "TODO"
   "datomic:dev://localhost:4334/chat-dev")
 
+;; Workflow
+
 (def workflow
   [[:read-log :split-txns]
    [:split-txns :process-for-es]
-   [:process-for-es :write-messages]
-   ])
+   [:process-for-es :write-messages]])
+
+;; Catalog entries
 
 (defn build-catalog
   ([] (build-catalog 5 50))
@@ -44,20 +47,25 @@
      :onyx/fn ::process-for-es
      :onyx/type :function
      :onyx/batch-size batch-size
-     :onyx/batch-timeout batch-timeout}
+     :onyx/batch-timeout batch-timeout}]))
 
-    ]))
-
-(def success? (constantly true))
+(defn -message-thread
+  [eid]
+  (-> (d/pull (d/db (d/connect db-uri)) [{:message/thread [:thread/id]}] eid)
+      (get-in [:message/thread :thread/id])
+      str))
 
 (defn process-for-es
   [{[eid attr v t insert?] :txn :as segment}]
-  {:elasticsearch/message {:content v}
+  {:elasticsearch/message {:content v
+                           :thread-id (-message-thread eid)}
    :elasticsearch/doc-id (str eid)})
 
 (defn split-txns
   [{:keys [id data t] :as segment}]
   (map (fn [d] {:txn d}) data))
+
+;; Lifecycles
 
 (defn build-lifecycles
   []
@@ -67,19 +75,30 @@
    {:lifecycle/task :write-messages
     :lifecycle/calls :onyx.plugin.elasticsearch/write-messages-calls}])
 
-(def message-content-id
-  (:db/id (d/pull (d/db (d/connect db-uri)) [:db/id] [:db/ident :message/content])))
+;; flow conditions
+
+(def -message-content-id (atom nil))
+
+(defn content-key-id
+  []
+  (if-let [id @-message-content-id]
+    id
+    (reset! -message-content-id
+            (-> (d/pull (d/db (d/connect db-uri)) [:db/id]
+                        [:db/ident :message/content])
+                :db/id))))
 
 (defn message?
   [event {[eid attr v t insert?] :txn :as old-segment} new-segment all-new-segments]
   (println "checking message " old-segment)
-  (and insert? (= message-content-id attr)))
+  (and insert? (= (content-key-id) attr)))
 
 (def flow-conditions
   [{:flow/from :process-for-es
     :flow/to [:write-messages]
-    :flow/predicate ::message?}
-   ])
+    :flow/predicate ::message?}])
+
+;; the job, proper
 
 (defn datomic-job
   [{:keys [onyx/batch-size onyx/batch-timeout] :as batch-settings}]
