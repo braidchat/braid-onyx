@@ -7,12 +7,6 @@
             [onyx.job]
             [onyx.api]
             [onyx.test-helper]
-            ;; Load plugin classes on peer start
-            [onyx.plugin.core-async]
-            ;; Load our tasks
-            [braid-onyx.tasks.math]
-            ;; Load our jobs
-            [braid-onyx.jobs.basic]
             [braid-onyx.jobs.datomic]))
 
 (defn file-exists?
