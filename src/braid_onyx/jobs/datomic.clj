@@ -78,21 +78,15 @@
 
 ;; flow conditions
 
-(def -message-content-id (atom nil))
-
-(defn content-key-id
-  []
-  (if-let [id @-message-content-id]
-    id
-    (reset! -message-content-id
-            (-> (d/pull (d/db (d/connect db-uri)) [:db/id]
-                        [:db/ident :message/content])
-                :db/id))))
+(def attribute-id
+  (memoize (fn [attr]
+             (-> (d/pull (d/db (d/connect db-uri)) [:db/id] [:db/ident attr])
+                 :db/id))))
 
 (defn message?
   [event {[eid attr v t insert?] :txn :as old-segment} new-segment all-new-segments]
   (println "checking message " old-segment)
-  (and insert? (= (content-key-id) attr)))
+  (and insert? (= (attribute-id :message/content) attr)))
 
 (def flow-conditions
   [{:flow/from :process-for-es
