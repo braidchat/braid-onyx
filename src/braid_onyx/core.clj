@@ -1,13 +1,14 @@
 (ns braid-onyx.core
   (:gen-class)
-  (:require [aero.core :refer [read-config]]
-            [clojure.java.io :as io]
-            [clojure.tools.cli :refer [parse-opts]]
-            [lib-onyx.peer :as peer]
-            [onyx.job]
-            [onyx.api]
-            [onyx.test-helper]
-            [braid-onyx.jobs.datomic]))
+  (:require
+    [aero.core :refer [read-config]]
+    [braid-onyx.jobs.datomic]
+    [clojure.java.io :as io]
+    [clojure.tools.cli :refer [parse-opts]]
+    [lib-onyx.peer :as peer]
+    [onyx.api]
+    [onyx.job]
+    [onyx.test-helper]))
 
 (defn file-exists?
   "Check both the file system and the resources/ directory

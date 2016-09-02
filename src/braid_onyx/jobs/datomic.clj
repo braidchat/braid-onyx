@@ -1,9 +1,10 @@
 (ns braid-onyx.jobs.datomic
-  (:require [onyx.job :refer [add-task register-job]]
-            [onyx.tasks.datomic :as datomic-task]
-            [onyx.plugin.datomic]
-            [onyx.plugin.elasticsearch]
-            [datomic.api :as d]))
+  (:require
+    [datomic.api :as d]
+    [onyx.job :refer [add-task register-job]]
+    [onyx.plugin.datomic]
+    [onyx.plugin.elasticsearch]
+    [onyx.tasks.datomic :as datomic-task]))
 
 (def db-uri
   "TODO"
