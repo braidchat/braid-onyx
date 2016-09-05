@@ -13,7 +13,9 @@
                                                                   org.apache.httpcomponents/httpcore
                                                                   org.apache.httpcomponents/httpclient]]
                  [org.onyxplatform/onyx-datomic "0.9.10.0-beta1" :exclusions [org.slf4j/slf4j-api commons-codec]]
-                 [org.onyxplatform/onyx-elasticsearch "0.9.10.0-beta1" :exclusions [org.slf4j/slf4j-api]]]
+                 [org.onyxplatform/onyx-elasticsearch "0.9.10.0-beta1" :exclusions [org.slf4j/slf4j-api]]
+                 [org.postgresql/postgresql "9.3-1103-jdbc4"]
+                 ]
   :source-paths ["src"]
 
   :main braid-onyx.core
