@@ -50,16 +50,9 @@
      :onyx/batch-size batch-size
      :onyx/batch-timeout batch-timeout}]))
 
-(defn -message-thread
-  [eid]
-  (-> (d/pull (d/db (d/connect db-uri)) [{:message/thread [:thread/id]}] eid)
-      (get-in [:message/thread :thread/id])
-      str))
-
 (defn process-for-es
   [{[eid attr v t insert?] :txn :as segment}]
-  {:elasticsearch/message {:content v
-                           :thread-id (-message-thread eid)}
+  {:elasticsearch/message {:content v}
    :elasticsearch/doc-id (str eid)})
 
 (defn split-txns
