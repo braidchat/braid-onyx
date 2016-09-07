@@ -6,10 +6,6 @@
     [onyx.plugin.elasticsearch]
     [onyx.tasks.datomic :as datomic-task]))
 
-(def db-uri
-  "TODO"
-  "datomic:dev://localhost:4334/chat-dev")
-
 ;; Workflow
 
 (def workflow
@@ -72,30 +68,31 @@
 ;; flow conditions
 
 (def attribute-id
-  (memoize (fn [attr]
+  (memoize (fn [db-uri attr]
              (-> (d/pull (d/db (d/connect db-uri)) [:db/id] [:db/ident attr])
                  :db/id))))
 
 (defn message?
-  [event {[eid attr v t insert?] :txn :as old-segment} new-segment all-new-segments]
-  (println "checking message " old-segment)
-  (and insert? (= (attribute-id :message/content) attr)))
+  [event {[eid attr v t insert?] :txn :as old-segment} new-segment all-new-segments db-uri]
+  (and insert? (= (attribute-id db-uri :message/content) attr)))
 
-(def flow-conditions
+(defn build-flow-conditions
+  [db-uri]
   [{:flow/from :process-for-es
     :flow/to [:write-messages]
-    :flow/predicate ::message?}])
+    ::db-uri db-uri
+    :flow/predicate [::message? ::db-uri]}])
 
 ;; the job, proper
 
 (defn datomic-job
-  [{:keys [onyx/batch-size onyx/batch-timeout] :as batch-settings}]
+  [{:keys [onyx/batch-size onyx/batch-timeout] :as batch-settings} db-uri]
   (let [job {:workflow workflow
              :catalog (build-catalog batch-size batch-timeout)
              :lifecycles (build-lifecycles)
              :windows []
              :triggers []
-             :flow-conditions flow-conditions
+             :flow-conditions (build-flow-conditions db-uri)
              :task-scheduler :onyx.task-scheduler/balanced}]
     (-> job
         (add-task (datomic-task/read-log :read-log
@@ -106,6 +103,6 @@
                                       batch-settings))))))
 
 (defmethod register-job "datomic-job"
-  [job-name config]
+  [job-name {db-uri :datomic/db-uri :as config}]
   (let [batch-settings {:onyx/batch-size 1 :onyx/batch-timeout 1000}]
-    (datomic-job batch-settings)))
+    (datomic-job batch-settings db-uri)))

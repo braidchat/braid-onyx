@@ -13,6 +13,10 @@
   :zookeeper.server/port 2188
   :onyx.log/config #profile {:default nil
                              :docker {:level :info}}}
+
+ :datomic/db-uri #or [#env DATOMIC_URI
+                      "datomic:dev://localhost:4334/chat-dev"]
+
  :peer-config
  {:onyx/tenancy-id #profile {:default "1"
                              :docker #env ONYX_ID}
