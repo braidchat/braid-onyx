@@ -16,14 +16,14 @@
 ;; Catalog entries
 
 (defn build-catalog
-  ([] (build-catalog 5 50))
-  ([batch-size batch-timeout]
+  ([config] (build-catalog config 5 50))
+  ([config batch-size batch-timeout]
    [{:onyx/name :write-messages
      :onyx/plugin :onyx.plugin.elasticsearch/write-messages
      :onyx/type :output
      :onyx/medium :elasticsearch
-     :elasticsearch/host "127.0.0.1"
-     :elasticsearch/port 9200
+     :elasticsearch/host (config :elasticsearch/host)
+     :elasticsearch/port (config :elasticsearch/port)
      ;:elasticsearch/cluster-name "my-cluster-name"
      :elasticsearch/client-type :http
      ;:elasticsearch/http-ops {:basic-auth ["user" "pass"]}
@@ -59,10 +59,7 @@
 
 (defn build-lifecycles
   []
-  [{:lifecycle/task :read-log
-    :lifecycle/calls :onyx.plugin.datomic/read-log-calls}
-
-   {:lifecycle/task :write-messages
+  [{:lifecycle/task :write-messages
     :lifecycle/calls :onyx.plugin.elasticsearch/write-messages-calls}])
 
 ;; flow conditions
@@ -86,9 +83,10 @@
 ;; the job, proper
 
 (defn datomic-job
-  [{:keys [onyx/batch-size onyx/batch-timeout] :as batch-settings} db-uri]
+  [{:keys [onyx/batch-size onyx/batch-timeout] :as batch-settings}
+   {db-uri :datomic/db-uri :as datomic-config}]
   (let [job {:workflow workflow
-             :catalog (build-catalog batch-size batch-timeout)
+             :catalog (build-catalog datomic-config batch-size batch-timeout)
              :lifecycles (build-lifecycles)
              :windows []
              :triggers []
@@ -96,13 +94,14 @@
              :task-scheduler :onyx.task-scheduler/balanced}]
     (-> job
         (add-task (datomic-task/read-log :read-log
-                               (merge {:datomic/uri db-uri
-                                       :checkpoint/key "checkpoint"
-                                       :checkpoint/force-reset? false
-                                       :onyx/max-peers 1}
-                                      batch-settings))))))
+                                         (merge {:datomic/uri db-uri
+                                                 :checkpoint/key "checkpoint"
+                                                 :checkpoint/force-reset? false
+                                                 :onyx/max-peers 1}
+                                                batch-settings))))))
 
 (defmethod register-job "datomic-job"
-  [job-name {db-uri :datomic/db-uri :as config}]
+  [job-name {:keys [datomic-config] :as config}]
+  (println "Starting datomic job for db" datomic-config)
   (let [batch-settings {:onyx/batch-size 1 :onyx/batch-timeout 1000}]
-    (datomic-job batch-settings db-uri)))
+    (datomic-job batch-settings datomic-config)))

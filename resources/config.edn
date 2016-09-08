@@ -14,9 +14,6 @@
   :onyx.log/config #profile {:default nil
                              :docker {:level :info}}}
 
- :datomic/db-uri #or [#env DATOMIC_URI
-                      "datomic:dev://localhost:4334/chat-dev"]
-
  :peer-config
  {:onyx/tenancy-id #profile {:default "1"
                              :docker #env ONYX_ID}
@@ -32,4 +29,12 @@
   :onyx.messaging.aeron/embedded-driver? #profile {:default true
                                                    :docker false}
   :onyx.log/config #profile {:default nil
-                             :docker {:level :info}}}}
+                             :docker {:level :info}}}
+
+ :datomic-config
+ {:datomic/db-uri #or [#env DATOMIC_URI
+                       "datomic:dev://localhost:4334/chat-dev"]
+  :elasticsearch/host #or [#env ELASTICSEARCH_HOST
+                           "localhost"]
+  :elasticsearch/port #or [#env ELASTICSEARCH_PORT
+                           9200]}}
